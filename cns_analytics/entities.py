@@ -19,6 +19,11 @@ class Side(enum.Enum):
     BUY = enum.auto()
     SELL = enum.auto()
 
+    def opposite(self):
+        if self is Side.BUY:
+            return Side.SELL
+        return Side.BUY
+
 
 class Direction(enum.Enum):
     """ Generic direction
