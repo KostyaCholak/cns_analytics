@@ -63,8 +63,8 @@ class MarkovChain:
                 if res1 + res2 < min_observations:
                     continue
                 pct1, pct2 = res1 / (res1 + res2), res2 / (res1 + res2)
-                significance = abs(pct1 - 0.5)
+                significance = abs(pct2 - 0.5)
                 if significance < min_significance:
                     continue
-                results.append((res1 + res2, pattern, pct1 - 0.5))
+                results.append((res1 + res2, pattern, pct2 - 0.5))
         return results
