@@ -51,3 +51,20 @@ class MarkovChain:
                     stats[key][obs] /= sum_entries
 
         return stats
+    
+    def find_patterns(self, min_observations=100, min_significance=0.1):
+        results = []
+        stats = self.get_stats(1)
+        key1, key2 = list(stats.values())[0].keys()
+        for length in range(2, 10):
+            stats = self.get_stats(length, pct=False)
+            for pattern, result in stats.items():
+                res1, res2 = result.get(key1, 0), result.get(key2, 0)
+                if res1 + res2 < min_observations:
+                    continue
+                pct1, pct2 = res1 / (res1 + res2), res2 / (res1 + res2)
+                significance = abs(pct1 - 0.5)
+                if significance < min_significance:
+                    continue
+                results.append((res1 + res2, pattern, pct1 - 0.5))
+        return results
