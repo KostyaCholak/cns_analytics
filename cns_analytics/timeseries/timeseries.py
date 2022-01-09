@@ -748,12 +748,13 @@ class TimeSeries:
         """Returns time series converted to levels, starting from zero"""
         symbol = self.expect_one_symbol(symbol)
         df = self.get_df(framed=framed)[symbol]
-        df = df - df.iloc[0]
+        shift = df.iloc[0]
+        df = df - shift
         index = [df.index[0]]
         result = [round(df.values[0] / level_size) * level_size]
         for idx, px in df.to_frame().itertuples():
             last_px = result[-1]
-            lvl = level_size if not pct else last_px * level_size
+            lvl = level_size if not pct else (last_px + shift) * level_size
             while abs(px - last_px) >= lvl:
                 last_px += np.sign(px - last_px) * lvl
                 result.append(last_px)
