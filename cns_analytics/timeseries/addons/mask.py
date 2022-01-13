@@ -95,8 +95,8 @@ class MaskAddon:
         return mask.values.reshape(-1)
     
     
-    def rising(self, threshold: float = 0, framed: bool = True) -> pd.Series:
-        return self.ts.get_df(framed=framed).diff() >= threshold
+    def rising(self, periods: int = 1, threshold: float = 0, framed: bool = True) -> pd.Series:
+        return self.ts.get_df(framed=framed).diff(periods) >= threshold
 
     @staticmethod
     def random_like(another_mask: np.ndarray) -> np.ndarray:
