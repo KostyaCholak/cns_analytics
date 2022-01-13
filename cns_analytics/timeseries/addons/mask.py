@@ -93,6 +93,10 @@ class MaskAddon:
         data = df.rolling(pd.Timedelta(window)).std() / coef / df * 100
         mask = data > volatility
         return mask.values.reshape(-1)
+    
+    
+    def rising(self, threshold: float = 0, framed: bool = True) -> pd.Series:
+        return self.ts.get_df(framed=framed).diff() >= threshold
 
     @staticmethod
     def random_like(another_mask: np.ndarray) -> np.ndarray:
