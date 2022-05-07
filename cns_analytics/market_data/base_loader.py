@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import logging
+import os
 from datetime import timedelta, datetime
 from operator import itemgetter
 from typing import Union, List, Dict, Tuple
@@ -8,6 +9,7 @@ from typing import Union, List, Dict, Tuple
 import pandas as pd
 import pytz
 
+from cns_analytics.cache import CACHE_DIR
 from cns_analytics.database import DataBase
 from cns_analytics.entities import Resolution, MDType, Symbol
 
@@ -31,9 +33,8 @@ class BaseMDLoader(abc.ABC):
       - save data
     """
 
-    _supported_symbols = {}
-
     def __init__(self):
+        self._supported_symbols = {}
         self.logger = logging.getLogger(type(self).__name__)
 
     @staticmethod
@@ -183,6 +184,7 @@ class BaseMDLoader(abc.ABC):
                          f'Got {len(collected_data)} out of {total_loaded_count} '
                          f'data points after filtering')
 
+        # await self._save_cache(md_type, symbol, collected_data)
         await self._save_data(md_type, symbol, collected_data)
 
         return True
@@ -214,12 +216,22 @@ class BaseMDLoader(abc.ABC):
     async def _get_already_saved_range(self, symbol: Symbol, md_type: MDType) -> \
             Tuple[datetime, datetime]:
         """ Returns timestamps of first and last occurrence of data for specified symbol"""
+        # return None, None
         table_name = self._get_database_table_name(md_type)
         symbol_id = await DataBase.get_symbol_id(symbol)
         query = f"SELECT min(ts), max(ts) FROM {table_name} WHERE symbol_id=$1"
         res = await DataBase.get_conn().fetchrow(query,  symbol_id)
 
+        print(res)
+
         return res['min'], res['max']
+
+    async def _save_cache(self, md_type: MDType, symbol: Symbol, collected_data: List[Dict]):
+        df = pd.DataFrame(collected_data)
+        df.set_index('ts', inplace=True)
+        df.sort_index(inplace=True)
+        key = f"get_ohlcs;db;{symbol.exchange.name};{symbol.name};resolution=1m;"
+        df.to_pickle(os.path.join(CACHE_DIR, key))
 
     async def _save_data(self, md_type: MDType, symbol: Symbol, collected_data: List[Dict]):
         if not collected_data:
@@ -242,19 +254,20 @@ class BaseMDLoader(abc.ABC):
         #     table_name=table_name, records=[tuple(x.values()) for x in collected_data],
         #     columns=list(first_row.keys()))
 
-        await DataBase.get_conn().executemany(
-            statement, [tuple(x.values()) for x in collected_data], timeout=1000)
+        step = 10000
+        for i in range(0, len(collected_data), step):
+            print('Saving', i, end='\r')
+            await DataBase.get_conn().executemany(
+                    statement, [tuple(x.values()) for x in collected_data[i:i+step]], timeout=2000)
 
         self.logger.info(f'{symbol.name}: Successfully saved {len(collected_data)} data points')
 
     async def get_supported_symbols(self, md_type) -> List[Symbol]:
-        loader_type = type(self)
-
-        if md_type not in loader_type._supported_symbols:
+        if md_type not in self._supported_symbols:
             self.logger.info(f'Loading supported symbols')
-            loader_type._supported_symbols[md_type] = await self._load_supported_symbols()
+            self._supported_symbols[md_type] = await self._load_supported_symbols()
 
-        return loader_type._supported_symbols[md_type]
+        return self._supported_symbols[md_type]
 
     async def __aenter__(self) -> "BaseMDLoader":
         return self
