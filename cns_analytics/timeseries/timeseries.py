@@ -87,6 +87,8 @@ class TimeSeries:
         from cns_analytics.timeseries.addons.backtest import BacktestAddon
         self.backtest = BacktestAddon(self)
 
+        self._is_ohlc = False
+
     @property
     def index(self):
         return self.get_raw_df().index
@@ -105,16 +107,32 @@ class TimeSeries:
         series._df.sort_index()
         return series
 
+    async def load_ticks(
+            self,
+            start: Optional[DateTime] = None,
+            end: Optional[DateTime] = None):
+        dfs = []
+        for symbol in self.__symbols:
+            dfs.append(await DataBase.get_ticks(symbol))
+
+        self._df = pd.concat(dfs, axis=1, join="inner")
+        self._df.sort_index()
+
     async def load(self,
                    start: Optional[DateTime] = None,
                    end: Optional[DateTime] = None,
-                   resolution='1m'):
+                   resolution='1m',
+                   ticks=False):
         """Loads prices from database
 
         :param start: First date to keep after loading
         :param end: Last date to keep after loading
         :param resolution: Can be any of 1m/5m/15m/1h/1d
+        :param ticks: Load ticks or closes
         """
+        if ticks:
+            return await self.load_ticks()
+
         dfs = []
 
         for symbol in self.__symbols:
@@ -147,6 +165,7 @@ class TimeSeries:
         :param end: Last date to keep after loading
         :param resolution: Can be any of 1m/5m/15m/1h/1d
         """
+        self._is_ohlc = True
         dfs = []
 
         for symbol in self.__symbols:
@@ -613,7 +632,17 @@ class TimeSeries:
     def resample(self, dur: Duration, inplace=True):
         """Changes time step of timeseries, irreversible if inplace"""
         if not self.empty():
-            df = self._df.resample(pd.Timedelta(dur)).last().dropna()
+            if self._is_ohlc:
+                resampled = self._df.resample(pd.Timedelta(dur))
+                df = resampled.last()
+                df['px_open'] = resampled.px_open.first()
+                df['px_high'] = resampled.px_high.max()
+                df['px_low'] = resampled.px_low.min()
+                df['volume'] = resampled.volume.sum()
+                df = df.dropna()
+            else:
+                df = self._df.resample(pd.Timedelta(dur), label='right').last().dropna()
+
         else:
             df = self._df
 
