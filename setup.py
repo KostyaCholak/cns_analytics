@@ -15,7 +15,7 @@ setup(
         'matplotlib==3.4.1',
         'pandas==1.2.4',
         'pytz==2018.7',
-        'numpy==1.19.5',
+        'numpy==1.22.3',
         'seaborn==0.11.1',
         'statsmodels==0.12.2',
         'imageio==2.9.0',
