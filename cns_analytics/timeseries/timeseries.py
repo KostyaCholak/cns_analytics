@@ -802,15 +802,17 @@ class TimeSeries:
         symbol = self.expect_one_symbol(symbol)
         return self.get_df(framed).iloc[-1][symbol]
 
-    def mean(self, symbol: Optional[Union[Symbol, str]] = None, framed: bool = True):
-        """Returns mean price for symbol"""
-        symbol = self.expect_one_symbol(symbol)
-        return self.get_df(framed)[symbol].mean()
+    def diff(self, *args, **kwargs):
+        return TimeSeries.from_df(self.get_raw_df().diff(*args, **kwargs))
 
-    def std(self, symbol: Optional[Union[Symbol, str]] = None, framed: bool = True):
-        """Returns std for symbol"""
-        symbol = self.expect_one_symbol(symbol)
-        return self.get_df(framed)[symbol].std()
+    def sum(self, *args, **kwargs):
+        return TimeSeries.from_df(self.get_raw_df().sum(*args, **kwargs))
+
+    def mean(self, *args, **kwargs):
+        return TimeSeries.from_df(self.get_raw_df().mean(*args, **kwargs))
+
+    def std(self, *args, **kwargs):
+        return TimeSeries.from_df(self.get_raw_df().std(*args, **kwargs))
 
     def scale_to(self, base: float, symbol: Optional[Union[Symbol, str]] = None, framed: bool = True):
         """Scales prices to start from base"""
