@@ -101,9 +101,9 @@ class MaskAddon:
     def autoregression(self, *, gt: bool = False, threshold: float = 0):
         df = self.ts.get_framed_df()
         if gt:
-            mask = df[(df > 0).shift().fillna(False)]
+            mask = (df > 0).shift().fillna(False)
         else:
-            mask = df[(df < 0).shift().fillna(False)]
+            mask = (df < 0).shift().fillna(False)
 
         return mask
 
