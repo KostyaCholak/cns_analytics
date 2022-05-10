@@ -29,6 +29,7 @@ setup(
         'yfinance==0.1.59',
         'colorama==0.3.9',
         'python-dateutil==2.8.1',
+        'python-dotenv',
     ],
-    packages=find_packages(include=['cns_analytics'])
+    packages=find_packages()
 )
