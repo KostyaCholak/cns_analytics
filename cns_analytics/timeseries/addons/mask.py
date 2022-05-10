@@ -98,6 +98,15 @@ class MaskAddon:
     def rising(self, periods: int = 1, threshold: float = 0, framed: bool = True) -> pd.Series:
         return self.ts.get_df(framed=framed).diff(periods) >= threshold
 
+    def autoregression(self, *, gt: bool = False, threshold: float = 0):
+        df = self.ts.get_masked_df()
+        if gt:
+            mask = df[(df > 0).shift().fillna(False)]
+        else:
+            mask = df[(df < 0).shift().fillna(False)]
+
+        return mask
+
     @staticmethod
     def random_like(another_mask: np.ndarray) -> np.ndarray:
         """Returns randomly shifted `another_mask`"""
