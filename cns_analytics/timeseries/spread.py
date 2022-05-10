@@ -32,7 +32,7 @@ def _wrap_spread_method(method):
         self.include_symbol(self.SPREAD_SERIES_NAME)
 
         # TODO: take into account spread op {-, /, +, *}
-        self.df[self.SPREAD_SERIES_NAME] = self.df[self._leg1] - self.df[self._leg2]
+        self._df[self.SPREAD_SERIES_NAME] = self._df[self._leg1] - self._df[self._leg2]
 
         return ret_val
 
@@ -238,7 +238,7 @@ class Spread(TimeSeries):
             plt.subplots_adjust(hspace=0.001)
 
             for ax in axes:
-                ax.title.set_visible(False)
+                ax._title.set_visible(False)
                 ax.set_facecolor('#112329')
 
             fig.canvas.manager.set_window_title(self.get_name())

@@ -57,6 +57,16 @@ class DataBase:
                             WHERE symbol_id=$1
                             ORDER BY "ts"''')
 
+        cls._queries['ticks'] = await cls._conn.prepare('''
+                            SELECT
+                              ts AS "time",
+                              px,
+                              qty,
+                              side
+                            FROM ticks
+                            WHERE symbol_id=$1
+                            ORDER BY "ts"''')
+
         cls._queries['ohlc_1m'] = await cls._conn.prepare('''
                                     SELECT
                                       ts AS "time",
@@ -213,6 +223,13 @@ class DataBase:
     @cache_db_request
     async def get_closes(cls, symbol: Symbol, resolution='1h') -> pd.DataFrame:
         return await cls._fetch_by_symbol(f'closes_{resolution}', symbol)
+
+    @classmethod
+    @cache_db_request
+    async def get_ticks(cls, symbol: Symbol) -> pd.DataFrame:
+        df = await cls._fetch_by_symbol('ticks', symbol)
+        df.rename(columns={x: f"{symbol}_{x}" for x in df.columns})
+        return df
 
     @classmethod
     @cache_db_request

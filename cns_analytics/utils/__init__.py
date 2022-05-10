@@ -103,10 +103,14 @@ def timeit(name='timeit', on=True, pct=True, reset=False, mean=False):
 
     time_total = time.time() - _TIMEIT_START[name]
 
-    _TIMEIT_HISTORY[name].append(_TIMEIT_SUM[name])
+    _TIMEIT_HISTORY[name].append(t2 - t1)
 
     if mean:
-        time_total = np.mean(_TIMEIT_HISTORY[name])
+        min_num = 0
+        if len(_TIMEIT_HISTORY[name]) > min_num:
+            time_total = np.nanmean(_TIMEIT_HISTORY[name][min_num:])
+        else:
+            time_total = 0
     elif not pct:
         time_total = _TIMEIT_START[name]
 
