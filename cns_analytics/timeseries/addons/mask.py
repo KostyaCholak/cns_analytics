@@ -99,7 +99,7 @@ class MaskAddon:
         return self.ts.get_df(framed=framed).diff(periods) >= threshold
 
     def autoregression(self, *, gt: bool = False, threshold: float = 0):
-        df = self.ts.get_masked_df()
+        df = self.ts.get_framed_df()
         if gt:
             mask = df[(df > 0).shift().fillna(False)]
         else:
