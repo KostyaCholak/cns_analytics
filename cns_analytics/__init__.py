@@ -29,7 +29,7 @@ CNS Analytics
 from .timeseries.spread import Spread
 from .timeseries import TimeSeries
 from .database import DataBase
-from .entities import Exchange, Symbol, Duration, DateTime
+from .entities import Exchange, Symbol, Duration, DateTime, Side
 from .utils.formula import formula_to_ts
 from .backtest.fix import get_fix
 from .visualization import Image, Animation

@@ -89,6 +89,7 @@ class Exchange(enum.Enum):
     BarchartDaily = "BarchartDaily"
     Finam = "Finam"
     Fred = "Fred"
+    QMall = "QMall"
 
 
 @dataclass

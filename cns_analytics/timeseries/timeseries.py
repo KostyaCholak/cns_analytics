@@ -502,7 +502,13 @@ class TimeSeries:
 
     def dropna(self):
         """Remove NaN values from dataframe"""
-        self._df.dropna(inplace=True)
+        return TimeSeries.from_df(self.get_raw_df().dropna())
+
+    def copy(self):
+        return TimeSeries.from_df(self.get_raw_df().copy())
+
+    def fillna(self, value):
+        return TimeSeries.from_df(self.get_raw_df().fillna(value))
 
     def get_crosses(self, value: float,
                     symbol: Union[Symbol, str] = None,
@@ -805,14 +811,44 @@ class TimeSeries:
     def diff(self, *args, **kwargs):
         return TimeSeries.from_df(self.get_raw_df().diff(*args, **kwargs))
 
-    def sum(self, *args, **kwargs):
-        return TimeSeries.from_df(self.get_raw_df().sum(*args, **kwargs))
+    def pct_change(self, *args, **kwargs):
+        return TimeSeries.from_df(self.get_raw_df().pct_change(*args, **kwargs))
+
+    def cumsum(self, *args, **kwargs):
+        return TimeSeries.from_df(self.get_raw_df().cumsum(*args, **kwargs))
+
+    def cummax(self, *args, **kwargs):
+        return TimeSeries.from_df(self.get_raw_df().cummax(*args, **kwargs))
 
     def mean(self, *args, **kwargs):
-        return TimeSeries.from_df(self.get_raw_df().mean(*args, **kwargs))
+        value = self.get_raw_df().mean(*args, **kwargs)
+        if len(value) == 1:
+            return float(value)
+        return TimeSeries.from_df(value)
+
+    def max(self, *args, **kwargs):
+        value = self.get_raw_df().max(*args, **kwargs)
+        if len(value) == 1:
+            return float(value)
+        return TimeSeries.from_df(value)
+
+    def min(self, *args, **kwargs):
+        value = self.get_raw_df().min(*args, **kwargs)
+        if len(value) == 1:
+            return float(value)
+        return TimeSeries.from_df(value)
+
+    def sum(self, *args, **kwargs):
+        value = self.get_raw_df().sum(*args, **kwargs)
+        if len(value) == 1:
+            return float(value)
+        return TimeSeries.from_df(value)
 
     def std(self, *args, **kwargs):
-        return TimeSeries.from_df(self.get_raw_df().std(*args, **kwargs))
+        value = self.get_raw_df().std(*args, **kwargs)
+        if len(value) == 1:
+            return float(value)
+        return TimeSeries.from_df(value)
 
     def scale_to(self, base: float, symbol: Optional[Union[Symbol, str]] = None, framed: bool = True):
         """Scales prices to start from base"""
@@ -880,12 +916,14 @@ class TimeSeries:
         return self.__mul__(other)
 
     def __rtruediv__(self, other):
+        raise NotImplementedError("Operation is not simetric, fix line below")
         return self.__truediv__(other)
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __rsub__(self, other):
+        raise NotImplementedError("Operation is not simetric, fix line below")
         return self.__sub__(other)
 
     def __gt__(self, other):
@@ -909,10 +947,10 @@ class TimeSeries:
         :returns: Self
         """
         if isinstance(other, TimeSeries):
-            self._df *= other.get_raw_df().values
+            _df = self._df * other.get_raw_df().values
         else:
-            self._df *= other
-        return self
+            _df = self._df * other
+        return TimeSeries.from_df(_df)
 
     def __add__(self, other):
         """Adds timeseries, float, numpy array or pandas series/frame to timeseries
@@ -921,10 +959,10 @@ class TimeSeries:
         :returns: Self
         """
         if isinstance(other, TimeSeries):
-            self._df += other.get_raw_df().values
+            _df = self._df + other.get_raw_df().values
         else:
-            self._df += other
-        return self
+            _df = self._df + other
+        return TimeSeries.from_df(_df)
 
     def __sub__(self, other):
         """Subtract timeseries, float, numpy array or pandas series/frame from timeseries
@@ -933,10 +971,10 @@ class TimeSeries:
         :returns: Self
         """
         if isinstance(other, TimeSeries):
-            self._df -= other.get_raw_df().values
+            _df = self._df - other.get_raw_df().values
         else:
-            self._df -= other
-        return self
+            _df = self._df - other
+        return TimeSeries.from_df(_df)
 
     def __truediv__(self, other):
         """Divides timeseries by timeseries, float, numpy array or pandas series/frame
@@ -945,7 +983,10 @@ class TimeSeries:
         :returns: Self
         """
         if isinstance(other, TimeSeries):
-            self._df /= other.get_raw_df().values
+            _df = self._df / other.get_raw_df().values
         else:
-            self._df /= other
-        return self
+            _df = self._df / other
+        return TimeSeries.from_df(_df)
+
+    def __neg__(self):
+        return TimeSeries.from_df(-self.get_raw_df())

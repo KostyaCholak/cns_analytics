@@ -19,7 +19,7 @@ __handler.setLevel(logging.INFO)
 __handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 __root.addHandler(__handler)
 
-load_dotenv()
+load_dotenv('.env')
 
 
 class DataBase:
