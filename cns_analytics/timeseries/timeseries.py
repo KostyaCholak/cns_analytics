@@ -571,9 +571,8 @@ class TimeSeries:
             return float(val)
 
     def sma(self, window: Duration, symbol: Union[Symbol, str] = None, framed: bool = True):
-        symbol = self.expect_one_symbol(symbol)
         df = self.get_df(framed=framed)
-        data = df[symbol].rolling(pd.Timedelta(window)).mean()
+        data = df.rolling(pd.Timedelta(window)).mean()
         return TimeSeries.from_df(data)
 
     def set_pointer(self, pointer: DateTime):
@@ -848,6 +847,14 @@ class TimeSeries:
         value = self.get_raw_df().std(*args, **kwargs)
         if len(value) == 1:
             return float(value)
+        return TimeSeries.from_df(value)
+
+    def abs(self, *args, **kwargs):
+        value = self.get_raw_df().abs(*args, **kwargs)
+        return TimeSeries.from_df(value)
+
+    def sign(self, *args, **kwargs):
+        value = np.sign(self.get_raw_df(), *args, **kwargs)
         return TimeSeries.from_df(value)
 
     def scale_to(self, base: float, symbol: Optional[Union[Symbol, str]] = None, framed: bool = True):
