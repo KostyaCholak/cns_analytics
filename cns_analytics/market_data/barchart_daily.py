@@ -30,7 +30,7 @@ class BarchartDailyLoader(BaseMDLoader):
 
     async def get_supported_symbols(self, md_type) -> List[Symbol]:
         await self._rest_request(
-            f"https://www.barchart.com/futures/quotes/{EXTERNAL_SYMBOL}/interactive-chart", {}, skip=True)
+            f"https://www.barchart.com/futures/quotes/CBZ23/interactive-chart", {}, skip=True)
         return await super().get_supported_symbols(md_type)
 
     @staticmethod
@@ -58,7 +58,7 @@ class BarchartDailyLoader(BaseMDLoader):
             token = self._session.cookie_jar.filter_cookies('https://www.barchart.com/')['XSRF-TOKEN'].value
             token = token.replace('%3D', '=')
             self._session.headers['x-xsrf-token'] = token
-            self._session.headers['referrer'] = f'https://www.barchart.com/futures/quotes/{EXTERNAL_SYMBOL}/interactive-chart'
+            self._session.headers['referrer'] = f'https://www.barchart.com/futures/quotes/ZBZ23/interactive-chart'
             self._session.headers['sec-fetch-site'] = 'same-origin'
             self._session.headers['sec-fetch-mode'] = 'cors'
             self._session.headers['sec-fetch-dest'] = 'empty'
@@ -96,8 +96,8 @@ class BarchartDailyLoader(BaseMDLoader):
 
         if md_type is MDType.OHLC:
             raw_data = await self._rest_request(f"https://www.barchart.com/proxies/timeseries/queryeod.ashx", {
-                'symbol': EXTERNAL_SYMBOL,
-                'data': 'dailynearest' if FUTURES else 'daily',
+                'symbol': symbol.loader_external_name,
+                'data': 'dailynearest' if symbol.loader_is_futures else 'daily',
                 'start': start.strftime('%Y%m%d'),
                 'end': end.strftime('%Y%m%d'),
                 'volume': 'contract',
@@ -149,12 +149,11 @@ class BarchartDailyLoader(BaseMDLoader):
         })
 
 
-EXTERNAL_SYMBOL = None
 FUTURES = None
 
 
 async def main():
-    global EXTERNAL_SYMBOL, FUTURES
+    global FUTURES
     # await DataBase.drop_symbol(Symbol('^RUBUSD', Exchange.BarchartDaily))
     # await DataBase.drop_symbol(Symbol('^JPYUSD', Exchange.BarchartDaily))
     # for symbol in (await DataBase.get_all_symbols(Exchange.BarchartDaily)):
@@ -185,7 +184,7 @@ async def main():
         name = aliases.get(symbol_name, symbol_name)
 
         symbol = await DataBase.create_symbol(symbol_name, exchange=Exchange.BarchartDaily)
-        EXTERNAL_SYMBOL = f'{name}Z21' if FUTURES else name
+        symbool.loader_external_name = f'{name}Z22' if FUTURES else name
 
         async with BarchartDailyLoader() as yfl:
             await yfl.fetch(
