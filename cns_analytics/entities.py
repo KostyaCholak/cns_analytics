@@ -90,6 +90,7 @@ class Exchange(enum.Enum):
     Finam = "Finam"
     Fred = "Fred"
     QMall = "QMall"
+    WhiteBit = "WhiteBit"
 
 
 @dataclass
