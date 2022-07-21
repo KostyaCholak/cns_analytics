@@ -220,7 +220,7 @@ def get_hurst_exponent(data):
         | 0.5 Random Work
         | 0.5-1 Trending
     """
-    lags = range(2, 100)
+    lags = range(2, 20)
     tau = [np.sqrt(np.std(np.subtract(data[lag:], data[:-lag]))) for lag in lags]
     poly = np.polyfit(np.log(lags), np.log(tau), 1)
     return poly[0] * 2.0

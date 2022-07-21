@@ -23,6 +23,11 @@ class Side(enum.Enum):
         if self is Side.BUY:
             return Side.SELL
         return Side.BUY
+    
+    def sign(self):
+        if self is Side.BUY:
+            return 1
+        return -1
 
 
 class Direction(enum.Enum):
