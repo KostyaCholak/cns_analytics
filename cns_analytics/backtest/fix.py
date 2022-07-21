@@ -275,3 +275,49 @@ def get_time_spaced_fix(ts: TimeSeries, time_step: Duration, loss_position: int,
         px_history.append(px)
 
     return np.asarray(reval_history), np.asarray(position_history), np.asarray(px_history)
+
+
+def get_level_activity(data, step):
+    next_buy = data.iloc[0] - step
+    next_sell = data.iloc[0] + step
+    sell_count = 0
+    buy_count = 0
+
+    history = []
+
+    for ts, row in data.iteritems():
+        while row >= next_sell:
+            sell_count += 1
+            next_sell += step
+            next_buy += step
+        while row <= next_buy:
+            buy_count += 1
+            next_sell -= step
+            next_buy -= step
+        history.append(min(sell_count, buy_count))
+
+    return pd.Series(history, index=data.index)
+
+
+def get_number_of_active_days(data):
+    """ Returns number of days with trading activity"""
+    # TODO: account for timezones (trading session can span across two days)
+    return data.resample('1d').last().dropna().count()
+
+
+def get_fix_per_day(data, step):
+    activity = get_level_activity(data, step)
+    fix = activity.iloc[-1] * step
+    num_of_days = get_number_of_active_days(data)
+    return fix / num_of_days
+
+
+def get_fix_per_day_yearly(data, step):
+    result = {}
+    activity = get_level_activity(data, step) * step
+    for year in range(data.index[0].year, data.index[-1].year + 1):
+        sub_activity = activity[f"01-01-{year}": f"01-01-{year + 1}"]
+        fix = sub_activity.iloc[-1] - sub_activity.iloc[0]
+        num_of_days = get_number_of_active_days(sub_activity)
+        result[year] = fix / num_of_days
+    return result
