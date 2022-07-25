@@ -16,7 +16,7 @@ from scipy.optimize import minimize
 
 from cns_analytics import utils
 from cns_analytics.database import DataBase
-from cns_analytics.entities import Symbol, DateTime, Duration, Triangle, DropLogic
+from cns_analytics.entities import Symbol, DateTime, Duration, Triangle, DropLogic, MDType
 from cns_analytics.utils import get_ols_regression, timeit
 
 
@@ -165,10 +165,13 @@ class TimeSeries:
         :param end: Last date to keep after loading
         :param resolution: Can be any of 1m/5m/15m/1h/1d
         """
+        from cns_analytics.storage import Storage
+
         self._is_ohlc = True
         dfs = []
 
         for symbol in self.__symbols:
+            # storage = Storage.load_data(symbol, MDType.OHLC)
             dfs.append(await DataBase.get_ohlcs(symbol, resolution=resolution))
 
         if start:
