@@ -1,11 +1,10 @@
 """Defines generic classes and enums"""
 
 import enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, Union
 
-import numba
 import numpy as np
 import pandas as pd
 
@@ -143,7 +142,7 @@ class Triangle:
         return self.b0 - self.b1 > threshold
 
     @staticmethod
-    @numba.njit
+    # @numba.njit
     def target_function(y, direction, h, points, outside_threshold):
         line = np.linspace(y[0], y[1], h)
 

@@ -83,7 +83,9 @@ class Storage:
 
     def _deserialize(self, key):
         local_path = os.path.join(self.local_folder, key)
-        return feather.read_dataframe(local_path)
+        df = feather.read_dataframe(local_path)
+        df.set_index('ts', inplace=True)
+        return df
 
     def _serialize(self, key, data: pd.DataFrame):
         local_path = os.path.join(self.local_folder, key)

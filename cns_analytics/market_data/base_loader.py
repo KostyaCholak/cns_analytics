@@ -1,7 +1,6 @@
 import abc
 import asyncio
 import logging
-import os
 from datetime import timedelta, datetime
 from operator import itemgetter
 from typing import Union, List, Dict, Tuple
@@ -9,9 +8,8 @@ from typing import Union, List, Dict, Tuple
 import pandas as pd
 import pytz
 
-from cns_analytics.cache import CACHE_DIR
-from cns_analytics.database import DataBase
 from cns_analytics.entities import Resolution, MDType, Symbol
+from cns_analytics.storage import Storage
 
 
 class MDLoaderException(Exception):
@@ -217,54 +215,22 @@ class BaseMDLoader(abc.ABC):
             Tuple[datetime, datetime]:
         """ Returns timestamps of first and last occurrence of data for specified symbol"""
         # return None, None
-        table_name = self._get_database_table_name(md_type)
-        symbol_id = await DataBase.get_symbol_id(symbol)
-        query = f"SELECT min(ts), max(ts) FROM {table_name} WHERE symbol_id=$1"
-        res = await DataBase.get_conn().fetchrow(query,  symbol_id)
+        self.logger.info(f'{symbol.name}: Loading saved range')
 
-        print(res)
-
-        return res['min'], res['max']
-
-    async def _save_cache(self, md_type: MDType, symbol: Symbol, collected_data: List[Dict]):
-        df = pd.DataFrame(collected_data)
-        df.set_index('ts', inplace=True)
-        df.sort_index(inplace=True)
-        key = f"get_ohlcs;db;{symbol.exchange.name};{symbol.name};resolution=1m;"
-        df.to_pickle(os.path.join(CACHE_DIR, key))
+        df = Storage.load_data(symbol, md_type)
+        return df.index[0], df.index[-1]
 
     async def _save_data(self, md_type: MDType, symbol: Symbol, collected_data: List[Dict]):
         if not collected_data:
             return
 
-        symbol_id = await DataBase.get_symbol_id(symbol)
+        df = pd.DataFrame(collected_data)
 
-        for row in collected_data:
-            row['symbol_id'] = symbol_id
-
-        first_row = collected_data[0]
-        columns_str = ', '.join(list(first_row.keys()))
-        columns_idx = ', '.join(f"${x[0] + 1}" for x in list(enumerate(first_row.keys())))
-
-        table_name = self._get_database_table_name(md_type)
-
-        statement = f"""INSERT INTO {table_name} ({columns_str}) VALUES({columns_idx});"""
-
-        # await DataBase.get_conn().copy_records_to_table(
-        #     table_name=table_name, records=[tuple(x.values()) for x in collected_data],
-        #     columns=list(first_row.keys()))
-
-        step = 10000
-        for i in range(0, len(collected_data), step):
-            print('Saving', i, end='\r')
-            await DataBase.get_conn().executemany(
-                    statement, [tuple(x.values()) for x in collected_data[i:i+step]], timeout=2000)
-
+        Storage.save_data(symbol, md_type, df)
         self.logger.info(f'{symbol.name}: Successfully saved {len(collected_data)} data points')
 
     async def get_supported_symbols(self, md_type) -> List[Symbol]:
         if md_type not in self._supported_symbols:
-            self.logger.info(f'Loading supported symbols')
             self._supported_symbols[md_type] = await self._load_supported_symbols()
 
         return self._supported_symbols[md_type]

@@ -5,19 +5,15 @@ import functools
 from datetime import datetime, timedelta
 from typing import Optional, Union, List, Dict, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytz
-import statsmodels.tsa.stattools as ts
-import ta.trend
 from dateutil import parser
-from scipy.optimize import minimize
 
 from cns_analytics import utils
 from cns_analytics.database import DataBase
 from cns_analytics.entities import Symbol, DateTime, Duration, Triangle, DropLogic, MDType
-from cns_analytics.utils import get_ols_regression, timeit
+from cns_analytics.utils import get_ols_regression
 
 
 class DateTimeIterator:
@@ -122,7 +118,8 @@ class TimeSeries:
                    start: Optional[DateTime] = None,
                    end: Optional[DateTime] = None,
                    resolution='1m',
-                   ticks=False):
+                   ticks=False,
+                   use_db=False):
         """Loads prices from database
 
         :param start: First date to keep after loading
@@ -130,13 +127,18 @@ class TimeSeries:
         :param resolution: Can be any of 1m/5m/15m/1h/1d
         :param ticks: Load ticks or closes
         """
+        from cns_analytics.storage import Storage
+
         if ticks:
             return await self.load_ticks()
 
         dfs = []
 
         for symbol in self.__symbols:
-            dfs.append(await DataBase.get_closes(symbol, resolution=resolution))
+            if use_db:
+                dfs.append(await DataBase.get_closes(symbol, resolution=resolution))
+            else:
+                dfs.append(Storage.load_data(symbol, MDType.OHLC).px_close)
 
         if start:
             if isinstance(start, str):
@@ -158,7 +160,8 @@ class TimeSeries:
     async def load_ohlc(self,
                   start: Optional[DateTime] = None,
                   end: Optional[DateTime] = None,
-                  resolution='1m'):
+                  resolution='1m',
+                  use_db=False):
         """Loads ohlc values from database
 
         :param start: First date to keep after loading
@@ -171,8 +174,10 @@ class TimeSeries:
         dfs = []
 
         for symbol in self.__symbols:
-            # storage = Storage.load_data(symbol, MDType.OHLC)
-            dfs.append(await DataBase.get_ohlcs(symbol, resolution=resolution))
+            if use_db:
+                dfs.append(await DataBase.get_ohlcs(symbol, resolution=resolution))
+            else:
+                dfs.append(Storage.load_data(symbol, MDType.OHLC))
 
         if start:
             if isinstance(start, str):
@@ -409,6 +414,8 @@ class TimeSeries:
 
         :returns: Stationarity, key points and p-value
         """
+        import statsmodels.tsa.stattools as ts
+
         if len(self.get_symbols()) != 1 and symbol is None:
             raise Exception("Select one symbol!")
         elif symbol is None:
@@ -470,6 +477,8 @@ class TimeSeries:
 
         :returns: Autocorrelation for symbol
         """
+        import statsmodels.tsa.stattools as ts
+
         symbols = [symbol] or self.get_symbols()
         if len(symbols) != 1:
             raise Exception("Expected exactly 1 symbol")
@@ -542,6 +551,7 @@ class TimeSeries:
         :param framed: Use framed data only
         :returns: MACD indicator series
         """
+        import ta.trend
         symbol = self.expect_one_symbol(symbol)
 
         data = ta.trend.macd_diff(self.get_df(framed=framed)[symbol],
@@ -665,6 +675,8 @@ class TimeSeries:
         :param outside_threshold: Max pct of points outside of upper or lower triangle lines
             (each side is counted separately)
         """
+        from scipy.optimize import minimize
+
         symbol = self.expect_one_symbol(symbol=symbol)
         points = self.get_df(framed=False)[symbol].values
         point_count = points.size
@@ -706,6 +718,8 @@ class TimeSeries:
                               std_period=std_period, std_limit=std_limit)
 
     def plot(self, *symbols: Union[Symbol, str], title: str = ""):
+        import matplotlib.pyplot as plt
+
         """Plots specified or all symbols"""
         df = self._df
 

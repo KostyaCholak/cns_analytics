@@ -6,9 +6,6 @@ import os
 import shutil
 import tempfile
 
-import imageio
-import matplotlib.pyplot as plt
-
 
 class Animation:
     """Adds simple way to create gif animations
@@ -31,6 +28,7 @@ class Animation:
 
     @contextlib.contextmanager
     def add_frame(self):
+        import matplotlib.pyplot as plt
         if self._size:
             fig = plt.figure(figsize=self._size)
         else:
@@ -42,6 +40,8 @@ class Animation:
         self._frame_idx += 1
 
     def save(self):
+        import imageio
+
         with imageio.get_writer(self._filename, mode='I', duration=self._duration) as writer:
             for idx in range(self._frame_idx):
                 frame_path = os.path.join(self.__tmp_dir, f"{idx}.png")

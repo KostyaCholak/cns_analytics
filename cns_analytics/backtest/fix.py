@@ -1,7 +1,6 @@
 from datetime import datetime
 from collections import defaultdict
 
-import matplotlib.pyplot as plt
 import pytz
 import pandas as pd
 import numpy as np

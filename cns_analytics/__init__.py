@@ -25,7 +25,6 @@ CNS Analytics
     print('Volatility for UNIUSDT', ts.get_volatility('UNIUSDT'))
 
 """
-
 from .timeseries.spread import Spread
 from .timeseries import TimeSeries
 from .database import DataBase

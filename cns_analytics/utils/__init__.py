@@ -10,7 +10,6 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
 
 from cns_analytics.entities import DropLogic, Duration
 
@@ -125,6 +124,8 @@ def timeit(name='timeit', on=True, pct=True, reset=False, mean=False):
 
 
 def get_correlation(x, y):
+    from scipy.stats import spearmanr
+
     return spearmanr(x, y).correlation
 
 
