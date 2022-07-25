@@ -16,31 +16,27 @@ logger = logging.getLogger(__name__)
 
 
 class BarchartDailyLoader(BaseMDLoader):
-    _session_token = None
+    _session = None
+    _authenticated = True
     source_id = 7
 
     def __init__(self):
         super().__init__()
-        self._session = aiohttp.ClientSession(headers={
-            "Referer": "https://www.barchart.com/futures/quotes/HG*0/interactive-chart",
-            "sec-ch-ua": "\"Google Chrome\";v=\"93\", \" Not;A Brand\";v=\"99\", \"Chromium\";v=\"93\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"macOS\"",
-            "upgrade-insecure-requests": "1",
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
-        })
+        if BarchartDailyLoader._session is None or BarchartDailyLoader._session.closed:
+            BarchartDailyLoader._authenticated = False
+            BarchartDailyLoader._session = aiohttp.ClientSession(headers={
+                "Referer": "https://www.barchart.com/futures/quotes/HG*0/interactive-chart",
+                "sec-ch-ua": "\"Google Chrome\";v=\"93\", \" Not;A Brand\";v=\"99\", \"Chromium\";v=\"93\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"macOS\"",
+                "upgrade-insecure-requests": "1",
+                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
+            })
 
     async def get_supported_symbols(self, md_type) -> List[Symbol]:
-        if BarchartDailyLoader._session_token is None:
+        if not BarchartDailyLoader._authenticated:
             await self._rest_request(
                 f"https://www.barchart.com/futures/quotes/CB*0/interactive-chart", {}, skip=True)
-        else:
-            self._session.headers['x-xsrf-token'] = BarchartDailyLoader._session_token
-            self._session.headers[
-                'referrer'] = f'https://www.barchart.com/futures/quotes/ZB*0/interactive-chart'
-            self._session.headers['sec-fetch-site'] = 'same-origin'
-            self._session.headers['sec-fetch-mode'] = 'cors'
-            self._session.headers['sec-fetch-dest'] = 'empty'
         return await super().get_supported_symbols(md_type)
 
     @staticmethod
@@ -137,7 +133,7 @@ class BarchartDailyLoader(BaseMDLoader):
                     "volume": float(volume)
                 })
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
 
             return data
 
