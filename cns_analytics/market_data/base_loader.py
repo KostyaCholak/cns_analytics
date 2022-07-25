@@ -209,7 +209,10 @@ class BaseMDLoader(abc.ABC):
         # return None, None
         self.logger.info(f'{symbol.name}: Loading saved range')
 
-        df = Storage.load_data(symbol, md_type)
+        try:
+            df = Storage.load_data(symbol, md_type)
+        except KeyError:
+            return None, None
         try:
             return df.index[0], df.index[-1]
         except IndexError:
