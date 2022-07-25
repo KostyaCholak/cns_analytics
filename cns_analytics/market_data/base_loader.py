@@ -172,17 +172,9 @@ class BaseMDLoader(abc.ABC):
 
         total_loaded_count = len(collected_data)
 
-        if saved_first is not None:
-            collected_data = [row for row in collected_data
-                              if not (saved_first <= row['ts'] <= saved_last)]
         collected_data = self._sort_data(collected_data)
         collected_data = self._make_data_unique(collected_data)
 
-        self.logger.info(f'{symbol.name}: '
-                         f'Got {len(collected_data)} out of {total_loaded_count} '
-                         f'data points after filtering')
-
-        # await self._save_cache(md_type, symbol, collected_data)
         await self._save_data(md_type, symbol, collected_data)
 
         return True
@@ -218,7 +210,10 @@ class BaseMDLoader(abc.ABC):
         self.logger.info(f'{symbol.name}: Loading saved range')
 
         df = Storage.load_data(symbol, md_type)
-        return df.index[0], df.index[-1]
+        try:
+            return df.index[0], df.index[-1]
+        except IndexError:
+            return None, None
 
     async def _save_data(self, md_type: MDType, symbol: Symbol, collected_data: List[Dict]):
         if not collected_data:

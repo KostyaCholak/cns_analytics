@@ -84,7 +84,11 @@ class Storage:
     def _deserialize(self, key):
         local_path = os.path.join(self.local_folder, key)
         df = feather.read_dataframe(local_path)
-        df.set_index('ts', inplace=True)
+        if 'ts' in df.columns:
+            df.rename(columns={
+                'ts': 'time'
+            }, inplace=True)
+            df.set_index('time', inplace=True)
         return df
 
     def _serialize(self, key, data: pd.DataFrame):
