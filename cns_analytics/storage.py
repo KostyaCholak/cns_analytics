@@ -89,6 +89,7 @@ class Storage:
                 'ts': 'time'
             }, inplace=True)
             df.set_index('time', inplace=True)
+        df = df.sort_index()
         return df
 
     def _serialize(self, key, data: pd.DataFrame):

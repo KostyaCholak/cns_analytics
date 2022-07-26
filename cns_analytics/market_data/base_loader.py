@@ -223,6 +223,8 @@ class BaseMDLoader(abc.ABC):
             return
 
         df = pd.DataFrame(collected_data)
+        df = df.set_index('ts')
+        df = df.sort_index()
 
         Storage.save_data(symbol, md_type, df)
         self.logger.info(f'{symbol.name}: Successfully saved {len(collected_data)} data points')
