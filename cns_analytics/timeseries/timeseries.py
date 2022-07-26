@@ -138,7 +138,7 @@ class TimeSeries:
             if use_db:
                 dfs.append(await DataBase.get_closes(symbol, resolution=resolution))
             else:
-                dfs.append(Storage.load_data(symbol, MDType.OHLC).px_close.rename(symbol))
+                dfs.append(Storage.load_data(symbol, MDType.OHLC).px_close.rename(symbol.name))
 
         if start:
             if isinstance(start, str):
