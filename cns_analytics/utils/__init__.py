@@ -11,7 +11,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-from cns_analytics.entities import DropLogic, Duration
+from cns_analytics.entities import DropLogic, Duration, Exchange, Symbol, MDType, Resolution
 
 
 def get_ols_regression(x, y):
@@ -225,3 +225,4 @@ def get_hurst_exponent(data):
     tau = [np.sqrt(np.std(np.subtract(data[lag:], data[:-lag]))) for lag in lags]
     poly = np.polyfit(np.log(lags), np.log(tau), 1)
     return poly[0] * 2.0
+

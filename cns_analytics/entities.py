@@ -92,6 +92,7 @@ class Exchange(enum.Enum):
     Barchart = "Barchart"
     BarchartDaily = "BarchartDaily"
     Finam = "Finam"
+    FinamTicks = "FinamTicks"
     Fred = "Fred"
     QMall = "QMall"
     WhiteBit = "WhiteBit"

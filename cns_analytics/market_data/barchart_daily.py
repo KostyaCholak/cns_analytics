@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class BarchartDailyLoader(BaseMDLoader):
     _session = None
-    _authenticated = True
+    _authenticated = False
     source_id = 7
 
     def __init__(self):
@@ -63,22 +63,17 @@ class BarchartDailyLoader(BaseMDLoader):
         if skip:
             token = self._session.cookie_jar.filter_cookies('https://www.barchart.com/')['XSRF-TOKEN'].value
             token = token.replace('%3D', '=')
-            BarchartDailyLoader._session_token = token
             self._session.headers['x-xsrf-token'] = token
             self._session.headers['referrer'] = f'https://www.barchart.com/futures/quotes/ZB*0/interactive-chart'
             self._session.headers['sec-fetch-site'] = 'same-origin'
             self._session.headers['sec-fetch-mode'] = 'cors'
             self._session.headers['sec-fetch-dest'] = 'empty'
-            if not r.ok:
-                breakpoint()
             assert r.ok
             return
 
         data = await r.text()
         lines = data.split('\n')
 
-        if not r.ok:
-            breakpoint()
         assert r.ok
 
         parsed = []
