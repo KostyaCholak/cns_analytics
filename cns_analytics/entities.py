@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, Union
 
-import numba
+# import numba
 import numpy as np
 import pandas as pd
 
@@ -88,8 +88,10 @@ class Exchange(enum.Enum):
     Barchart = "Barchart"
     BarchartDaily = "BarchartDaily"
     Finam = "Finam"
+    FinamTicks = "FinamTicks"
     Fred = "Fred"
     QMall = "QMall"
+    WhiteBit = "WhiteBit"
 
 
 @dataclass
@@ -137,7 +139,7 @@ class Triangle:
         return self.b0 - self.b1 > threshold
 
     @staticmethod
-    @numba.njit
+    # @numba.njit
     def target_function(y, direction, h, points, outside_threshold):
         line = np.linspace(y[0], y[1], h)
 

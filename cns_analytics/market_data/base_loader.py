@@ -221,7 +221,6 @@ class BaseMDLoader(abc.ABC):
         symbol_id = await DataBase.get_symbol_id(symbol)
         query = f"SELECT min(ts), max(ts) FROM {table_name} WHERE symbol_id=$1"
         res = await DataBase.get_conn().fetchrow(query,  symbol_id)
-
         print(res)
 
         return res['min'], res['max']

@@ -571,8 +571,10 @@ class TimeSeries:
             return float(val)
 
     def sma(self, window: Duration, symbol: Union[Symbol, str] = None, framed: bool = True):
+        if not isinstance(window, int):
+            window = pd.Timedelta(window)
         df = self.get_df(framed=framed)
-        data = df.rolling(pd.Timedelta(window)).mean()
+        data = df.rolling(window).mean()
         return TimeSeries.from_df(data)
 
     def set_pointer(self, pointer: DateTime):
