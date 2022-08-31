@@ -23,11 +23,18 @@ class Storage:
 
     @classmethod
     def get(cls):
-        if cls._storage is None or not cls._storage.ssh.get_transport().is_active():
+        if cls._storage is None:
             cls._storage = cls()
         return cls._storage
 
     def __init__(self):
+        self.sftp = None
+        self.ssh = None
+
+    def ensure_connected(self):
+        if cls._storage is not None and cls._storage.ssh.get_transport().is_active():
+            return
+
         ssh = paramiko.SSHClient()
 
         if "STORAGE_HOST_KEY" in os.environ:
@@ -46,6 +53,7 @@ class Storage:
         self.ssh = ssh
 
     def _exists_remote(self, key):
+        self.ensure_connected()
         remote_path = os.path.join(self.remote_folder, key)
         try:
             self.sftp.stat(remote_path)
@@ -58,6 +66,7 @@ class Storage:
         return os.path.exists(local_path)
 
     def _upload(self, key):
+        self.ensure_connected()
         local_path = os.path.join(self.local_folder, key)
         remote_path = os.path.join(self.remote_folder, key)
         folders, filename = os.path.split(key)
@@ -73,10 +82,11 @@ class Storage:
         self.sftp.put(local_path, remote_path)
 
     def _download(self, key):
+        self.ensure_connected()
         remote_path = os.path.join(self.remote_folder, key)
         local_path = os.path.join(self.local_folder, key)
 
-        folders, filename = os.path.split(key)
+        folders, filename = os.path.split(local_path)
         os.makedirs(os.path.join(folders), exist_ok=True)
 
         self.sftp.get(remote_path, local_path)
