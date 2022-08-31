@@ -11,10 +11,8 @@ from collections import Counter
 from datetime import datetime
 from typing import Union, List
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 
 from cns_analytics import TimeSeries
 
@@ -25,6 +23,8 @@ DIR_IDX = Counter()
 class Image:
     """Adds abstraction over matplotlib"""
     def __init__(self, show=None, save_to=None, title=None, fig_size=(8, 8), draw=False):
+        import matplotlib.pyplot as plt
+
         if show is None and save_to is None:
             show = True
 
@@ -47,6 +47,8 @@ class Image:
 
     def add(self, something: Union[TimeSeries, pd.DataFrame, pd.Series, tuple,
                                    np.ndarray, List, float, pd.Timestamp, datetime], style='line', **kwargs):
+        import matplotlib.pyplot as plt
+
         if isinstance(something, TimeSeries):
             plt.plot(something.get_raw_df(), **kwargs)
         elif isinstance(something, float) or isinstance(something, int):
@@ -67,24 +69,36 @@ class Image:
                 plt.step(x, y, **kwargs)
 
     def heatmap(self, data):
+        import seaborn as sns
+
         sns.heatmap(data, vmin=0.5)
 
     def addh(self, data, **kwargs):
+        import matplotlib.pyplot as plt
+
         plt.axhline(data, **kwargs)
 
     def addv(self, data, **kwargs):
+        import matplotlib.pyplot as plt
+
         plt.axvline(data, **kwargs)
 
     def bar(self, data, width=5, **kwargs):
+        import matplotlib.pyplot as plt
+
         plt.bar(data.index, data, width=width, **kwargs)
 
     def hist(self, data, bins=20, **kwargs):
+        import matplotlib.pyplot as plt
+
         plt.hist(data, bins=20, **kwargs)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        import matplotlib.pyplot as plt
+
         if exc_type is not None:
             return False
 

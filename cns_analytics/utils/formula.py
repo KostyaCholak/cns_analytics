@@ -3,15 +3,25 @@ import tokenize
 from io import BytesIO
 
 import pandas as pd
-from cns_analytics import TimeSeries, DataBase, Exchange
+from cns_analytics import TimeSeries, DataBase, Exchange, Symbol
+from cns_analytics.market_data import download_data
 
 
 async def _get_md(symbols, exchange, start=None, end=None):
-    # TODO: do it with context manager
-    DataBase.set_default_exchange(exchange)
+    _symbols = []
+    for symbol in symbols:
+        if isinstance(symbol, Symbol):
+            _symbols.append(symbol)
+        else:
+            _symbols.append(Symbol(symbol, exchange))
 
-    ts = TimeSeries(*symbols)
-    await ts.load(resolution='1m', start=start, end=end)
+    ts = TimeSeries(*_symbols)
+    try:
+        await ts.load(start=start, end=end)
+    except KeyError:
+        for symbol in _symbols:
+            await download_data(symbol.name, symbol.exchange)
+        await ts.load(start=start, end=end)
 
     df = ts.get_raw_df()
     df['index'] = df.index
@@ -36,7 +46,7 @@ def fix_money(series, money=100, interval=pd.Timedelta('90d')):
     return pd.Series(hist, name=series.name, index=series.index)
 
 
-async def formula_to_ts(formula, exchange: Exchange = Exchange.Barchart, start=None, end=None) -> TimeSeries:
+async def formula_to_ts(formula, exchange: Exchange = Exchange.BarchartDaily, start=None, end=None) -> TimeSeries:
     context = {
         'm': fix_money
     }

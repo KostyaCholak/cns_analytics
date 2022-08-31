@@ -10,9 +10,8 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
 
-from cns_analytics.entities import DropLogic, Duration
+from cns_analytics.entities import DropLogic, Duration, Exchange, Symbol, MDType, Resolution
 
 
 def get_ols_regression(x, y):
@@ -125,6 +124,8 @@ def timeit(name='timeit', on=True, pct=True, reset=False, mean=False):
 
 
 def get_correlation(x, y):
+    from scipy.stats import spearmanr
+
     return spearmanr(x, y).correlation
 
 
@@ -220,7 +221,8 @@ def get_hurst_exponent(data):
         | 0.5 Random Work
         | 0.5-1 Trending
     """
-    lags = range(2, 100)
+    lags = range(2, 20)
     tau = [np.sqrt(np.std(np.subtract(data[lag:], data[:-lag]))) for lag in lags]
     poly = np.polyfit(np.log(lags), np.log(tau), 1)
     return poly[0] * 2.0
+

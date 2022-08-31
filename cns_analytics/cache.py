@@ -31,6 +31,7 @@ def read_cache(key) -> pd.DataFrame:
 
 
 def store_cache(key, df: pd.DataFrame):
+    return
     return df.to_pickle(os.path.join(CACHE_DIR, key))
 
 

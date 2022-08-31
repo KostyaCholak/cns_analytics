@@ -1,11 +1,10 @@
 """Defines generic classes and enums"""
 
 import enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, Union
 
-# import numba
 import numpy as np
 import pandas as pd
 
@@ -23,6 +22,11 @@ class Side(enum.Enum):
         if self is Side.BUY:
             return Side.SELL
         return Side.BUY
+    
+    def sign(self):
+        if self is Side.BUY:
+            return 1
+        return -1
 
 
 class Direction(enum.Enum):
@@ -77,6 +81,7 @@ class MDType(enum.Enum):
     OHLC = enum.auto()
     MARKET_VOLUME = enum.auto()
     FUNDING_RATES = enum.auto()
+    BID_ASK = enum.auto()
 
 
 class Exchange(enum.Enum):
@@ -92,6 +97,10 @@ class Exchange(enum.Enum):
     Fred = "Fred"
     QMall = "QMall"
     WhiteBit = "WhiteBit"
+<<<<<<< HEAD
+=======
+    Deribit = "Deribit"
+>>>>>>> 55805cfcf082a67fc6ccc1a36dd418c0a6b49023
 
 
 @dataclass

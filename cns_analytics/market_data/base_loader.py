@@ -1,7 +1,6 @@
 import abc
 import asyncio
 import logging
-import os
 from datetime import timedelta, datetime
 from operator import itemgetter
 from typing import Union, List, Dict, Tuple
@@ -9,9 +8,8 @@ from typing import Union, List, Dict, Tuple
 import pandas as pd
 import pytz
 
-from cns_analytics.cache import CACHE_DIR
-from cns_analytics.database import DataBase
 from cns_analytics.entities import Resolution, MDType, Symbol
+from cns_analytics.storage import Storage
 
 
 class MDLoaderException(Exception):
@@ -32,6 +30,7 @@ class BaseMDLoader(abc.ABC):
       - sort data
       - save data
     """
+    stop_on_empty = True
 
     def __init__(self):
         self._supported_symbols = {}
@@ -84,6 +83,7 @@ class BaseMDLoader(abc.ABC):
                     resolution: Resolution) -> bool:
         """ Fetches new market data and saves it (sorted and unique)"""
         date_cursor = datetime.now().astimezone(tz=pytz.UTC)
+        date_cursor = date_cursor.replace(hour=0, minute=0, second=0, microsecond=0)
         earliest_date = date_cursor - duration
 
         supported_symbols = await self.get_supported_symbols(md_type)
@@ -115,10 +115,12 @@ class BaseMDLoader(abc.ABC):
             self.logger.info(f'{symbol.name}: Loaded {len(data)} data points '
                              f'from {(date_cursor - step).strftime("%Y-%m-%d")} '
                              f'to {date_cursor.strftime("%Y-%m-%d")}')
-            if not data:
+            if not data and self.stop_on_empty is True:
                 break
 
             date_cursor -= step
+            
+            step = self.get_step_for_resolution(md_type, resolution)
 
         collected_data: List[Dict] = []
 
@@ -174,17 +176,9 @@ class BaseMDLoader(abc.ABC):
 
         total_loaded_count = len(collected_data)
 
-        if saved_first is not None:
-            collected_data = [row for row in collected_data
-                              if not (saved_first <= row['ts'] <= saved_last)]
         collected_data = self._sort_data(collected_data)
-        collected_data = self._make_data_unique(collected_data)
+        # collected_data = self._make_data_unique(collected_data)
 
-        self.logger.info(f'{symbol.name}: '
-                         f'Got {len(collected_data)} out of {total_loaded_count} '
-                         f'data points after filtering')
-
-        # await self._save_cache(md_type, symbol, collected_data)
         await self._save_data(md_type, symbol, collected_data)
 
         return True
@@ -217,53 +211,36 @@ class BaseMDLoader(abc.ABC):
             Tuple[datetime, datetime]:
         """ Returns timestamps of first and last occurrence of data for specified symbol"""
         # return None, None
-        table_name = self._get_database_table_name(md_type)
-        symbol_id = await DataBase.get_symbol_id(symbol)
-        query = f"SELECT min(ts), max(ts) FROM {table_name} WHERE symbol_id=$1"
-        res = await DataBase.get_conn().fetchrow(query,  symbol_id)
-        print(res)
-
-        return res['min'], res['max']
-
-    async def _save_cache(self, md_type: MDType, symbol: Symbol, collected_data: List[Dict]):
-        df = pd.DataFrame(collected_data)
-        df.set_index('ts', inplace=True)
-        df.sort_index(inplace=True)
-        key = f"get_ohlcs;db;{symbol.exchange.name};{symbol.name};resolution=1m;"
-        df.to_pickle(os.path.join(CACHE_DIR, key))
+        self.logger.info(f'{symbol.name}: Loading saved range')
+        try:
+            df = Storage.load_data(symbol, md_type)
+        except KeyError:
+            return None, None
+        try:
+            return df.index[0], df.index[-1]
+        except IndexError:
+            return None, None
 
     async def _save_data(self, md_type: MDType, symbol: Symbol, collected_data: List[Dict]):
         if not collected_data:
             return
 
-        symbol_id = await DataBase.get_symbol_id(symbol)
+        df = pd.DataFrame(collected_data)
+        df = df.set_index('ts')
+        breakpoint()
+        try:
+            sdf = Storage.load_data(symbol, md_type)
+            df = pd.concat([sdf, df], axis=0)
+        except KeyError:
+            pass
+        df = df.sort_index()
+        df = df[~df.index.duplicated(keep='first')]
 
-        for row in collected_data:
-            row['symbol_id'] = symbol_id
-
-        first_row = collected_data[0]
-        columns_str = ', '.join(list(first_row.keys()))
-        columns_idx = ', '.join(f"${x[0] + 1}" for x in list(enumerate(first_row.keys())))
-
-        table_name = self._get_database_table_name(md_type)
-
-        statement = f"""INSERT INTO {table_name} ({columns_str}) VALUES({columns_idx});"""
-
-        # await DataBase.get_conn().copy_records_to_table(
-        #     table_name=table_name, records=[tuple(x.values()) for x in collected_data],
-        #     columns=list(first_row.keys()))
-
-        step = 10000
-        for i in range(0, len(collected_data), step):
-            print('Saving', i, end='\r')
-            await DataBase.get_conn().executemany(
-                    statement, [tuple(x.values()) for x in collected_data[i:i+step]], timeout=2000)
-
-        self.logger.info(f'{symbol.name}: Successfully saved {len(collected_data)} data points')
+        Storage.save_data(symbol, md_type, df)
+        self.logger.info(f'{symbol.name}: Successfully saved {len(df)} data points')
 
     async def get_supported_symbols(self, md_type) -> List[Symbol]:
         if md_type not in self._supported_symbols:
-            self.logger.info(f'Loading supported symbols')
             self._supported_symbols[md_type] = await self._load_supported_symbols()
 
         return self._supported_symbols[md_type]

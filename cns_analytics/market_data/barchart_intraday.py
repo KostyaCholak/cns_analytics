@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+import numpy as np
 from datetime import timedelta, datetime
 from typing import List, Dict
 
@@ -16,28 +17,44 @@ logger = logging.getLogger(__name__)
 
 
 class BarchartIntradayLoader(BaseMDLoader):
+    _session = None
+    _authenticated = False
     source_id = 3
 
     def __init__(self):
         super().__init__()
-        self._session = aiohttp.ClientSession(headers={
-            "sec-ch-ua": "\"Google Chrome\";v=\"93\", \" Not;A Brand\";v=\"99\", \"Chromium\";v=\"93\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"macOS\"",
-            "upgrade-insecure-requests": "1",
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
-        })
+        self._data_points_per_call = []
+        self._last_mult = None
+        if BarchartIntradayLoader._session is None or BarchartIntradayLoader._session.closed:
+            BarchartIntradayLoader._authenticated = False
+            BarchartIntradayLoader._session = aiohttp.ClientSession(headers={
+#                 "Referer": "https://www.barchart.com/futures/quotes/HG*0/interactive-chart",
+                "sec-ch-ua": "\"Google Chrome\";v=\"93\", \" Not;A Brand\";v=\"99\", \"Chromium\";v=\"93\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"macOS\"",
+                "upgrade-insecure-requests": "1",
+                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
+            })
 
     async def get_supported_symbols(self, md_type) -> List[Symbol]:
-        await self._rest_request(
-            f"https://www.barchart.com/futures/quotes/{EXTERNAL_SYMBOL}/interactive-chart", {}, skip=True)
+        if not BarchartIntradayLoader._authenticated:
+            await self._rest_request(
+                f"https://www.barchart.com/futures/quotes/HG*0/interactive-chart", {}, skip=True)
         return await super().get_supported_symbols(md_type)
 
-    @staticmethod
-    def get_step_for_resolution(md_type: MDType, resolution: Resolution) -> timedelta:
+#     @staticmethod
+    def get_step_for_resolution(self, md_type: MDType, resolution: Resolution) -> timedelta:
         if md_type in {MDType.MARKET_VOLUME, MDType.OHLC}:
+            if len(self._data_points_per_call) > 5:
+                mult = 7000 / max(self._data_points_per_call)
+                
+                mult = self._last_mult * mult
+            else:
+                mult = 1
+            mult = min(max(mult, 1), 5)
+            self._last_mult = mult
             assert resolution is Resolution.m1
-            return timedelta(days=7 * 4)
+            return timedelta(days=round(7 * 1 * mult))
 
         raise NotImplementedError()
 
@@ -59,27 +76,24 @@ class BarchartIntradayLoader(BaseMDLoader):
             token = self._session.cookie_jar.filter_cookies('https://www.barchart.com/')['XSRF-TOKEN'].value
             token = token.replace('%3D', '=')
             self._session.headers['x-xsrf-token'] = token
-            self._session.headers['referrer'] = f'https://www.barchart.com/futures/quotes/{EXTERNAL_SYMBOL}/interactive-chart'
+            self._session.headers['referrer'] = f'https://www.barchart.com/futures/quotes/HG*0/interactive-chart'
             self._session.headers['sec-fetch-site'] = 'same-origin'
             self._session.headers['sec-fetch-mode'] = 'cors'
             self._session.headers['sec-fetch-dest'] = 'empty'
             assert r.ok
             return
+#         print(r)
+        assert r.ok
 
-        try:
-            data = await r.json()
-        except:
-            breakpoint()
+        data = await r.json()
         parsed = []
+        
+        data_points_num = len(data['data'])
 
-        print('Rate limit:', r.headers['x-ratelimit-limit'])
-
-        if 'data' not in data:
-            breakpoint()
-
-        if len(data['data']) >= 9998:
-            print('Requested too much data!!\nLower load step.')
-            breakpoint()
+        assert data_points_num < 9998, 'Requested too much data!!\nLower load step.'
+        
+        self._data_points_per_call.append(data_points_num)
+        self._data_points_per_call = self._data_points_per_call[-10:]
 
         if 'data' not in data:
             breakpoint()
@@ -100,9 +114,9 @@ class BarchartIntradayLoader(BaseMDLoader):
                      start: datetime, end: datetime, resolution: Resolution) -> List[Dict]:
         if md_type is MDType.OHLC:
             raw_data = await self._rest_request(f"https://www.barchart.com/proxies/core-api/v1/historical/get", {
-                'symbol': EXTERNAL_SYMBOL,
+                'symbol': symbol.loader_external_name,
                 'fields': 'symbol,tradeTime.format(m/d/Y),openPrice,highPrice,lowPrice,lastPrice,priceChange,percentChange,volume,symbolCode,symbolType',
-                'type': 'nearby_minutes' if FUTURES else 'minutes',
+                'type': 'nearby_minutes' if symbol.loader_is_futures else 'minutes',
                 'orderBy': 'tradeTime',
                 'orderDir': 'desc',
                 'limit': '9999',
@@ -133,7 +147,7 @@ class BarchartIntradayLoader(BaseMDLoader):
                     "volume": float(volume)
                 })
 
-            await asyncio.sleep(0.9)
+            await asyncio.sleep(0.3)
 
             return data
 

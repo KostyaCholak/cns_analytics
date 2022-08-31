@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 from datetime import timedelta, datetime
 from typing import List, Dict
 
@@ -15,22 +16,27 @@ logger = logging.getLogger(__name__)
 
 
 class BarchartDailyLoader(BaseMDLoader):
+    _session = None
+    _authenticated = False
     source_id = 7
 
     def __init__(self):
         super().__init__()
-        self._session = aiohttp.ClientSession(headers={
-            "Referer": "https://www.barchart.com/futures/quotes/HGK21/interactive-chart",
-            "sec-ch-ua": "\"Google Chrome\";v=\"93\", \" Not;A Brand\";v=\"99\", \"Chromium\";v=\"93\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"macOS\"",
-            "upgrade-insecure-requests": "1",
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
-        })
+        if BarchartDailyLoader._session is None or BarchartDailyLoader._session.closed:
+            BarchartDailyLoader._authenticated = False
+            BarchartDailyLoader._session = aiohttp.ClientSession(headers={
+                "Referer": "https://www.barchart.com/futures/quotes/HG*0/interactive-chart",
+                "sec-ch-ua": "\"Google Chrome\";v=\"93\", \" Not;A Brand\";v=\"99\", \"Chromium\";v=\"93\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"macOS\"",
+                "upgrade-insecure-requests": "1",
+                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36'
+            })
 
     async def get_supported_symbols(self, md_type) -> List[Symbol]:
-        await self._rest_request(
-            f"https://www.barchart.com/futures/quotes/CBZ23/interactive-chart", {}, skip=True)
+        if not BarchartDailyLoader._authenticated:
+            await self._rest_request(
+                f"https://www.barchart.com/futures/quotes/CB*0/interactive-chart", {}, skip=True)
         return await super().get_supported_symbols(md_type)
 
     @staticmethod
@@ -58,20 +64,16 @@ class BarchartDailyLoader(BaseMDLoader):
             token = self._session.cookie_jar.filter_cookies('https://www.barchart.com/')['XSRF-TOKEN'].value
             token = token.replace('%3D', '=')
             self._session.headers['x-xsrf-token'] = token
-            self._session.headers['referrer'] = f'https://www.barchart.com/futures/quotes/ZBZ23/interactive-chart'
+            self._session.headers['referrer'] = f'https://www.barchart.com/futures/quotes/ZB*0/interactive-chart'
             self._session.headers['sec-fetch-site'] = 'same-origin'
             self._session.headers['sec-fetch-mode'] = 'cors'
             self._session.headers['sec-fetch-dest'] = 'empty'
-            if not r.ok:
-                breakpoint()
             assert r.ok
             return
 
         data = await r.text()
         lines = data.split('\n')
 
-        if not r.ok:
-            breakpoint()
         assert r.ok
 
         parsed = []
@@ -126,7 +128,7 @@ class BarchartDailyLoader(BaseMDLoader):
                     "volume": float(volume)
                 })
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
 
             return data
 
@@ -149,21 +151,7 @@ class BarchartDailyLoader(BaseMDLoader):
         })
 
 
-FUTURES = None
-
-
-async def main():
-    global FUTURES
-    # await DataBase.drop_symbol(Symbol('^RUBUSD', Exchange.BarchartDaily))
-    # await DataBase.drop_symbol(Symbol('^JPYUSD', Exchange.BarchartDaily))
-    # for symbol in (await DataBase.get_all_symbols(Exchange.BarchartDaily)):
-    #     await DataBase.drop_symbol(symbol)
-
-    # T2 = ZT
-    # T3 = ZE
-    # T5 = ZF
-    # T10 = ZN
-    # T30 = ZB
+async def main(symbols):
     aliases = {
         'T2': 'ZT',
         'T3': 'ZE',
@@ -178,42 +166,18 @@ async def main():
         'JPYUSD': '^JPYUSD',
         'RUBUSD': '^RUBUSD',
     }
-    if 1:
-        symbol_name = 'JX'
-        FUTURES = True
+
+    for symbol_name in symbols:
         name = aliases.get(symbol_name, symbol_name)
 
-        symbol = await DataBase.create_symbol(symbol_name, exchange=Exchange.BarchartDaily)
-        symbool.loader_external_name = f'{name}Z22' if FUTURES else name
+        symbol = Symbol(symbol_name, exchange=Exchange.BarchartDaily)
+        symbol.loader_is_futures = len(name) <= 2
+        symbol.loader_external_name = f'{name}*0' if symbol.loader_is_futures else name
 
         async with BarchartDailyLoader() as yfl:
             await yfl.fetch(
                 symbol, md_type=MDType.OHLC, duration=timedelta(days=365 * 35), resolution=Resolution.d1)
 
-    if 0:
-        for symbol_name in ['EURUSD', 'JPYUSD']:
-            FUTURES = False
-            name = aliases.get(symbol_name, symbol_name)
-
-            symbol = await DataBase.create_symbol(symbol_name, exchange=Exchange.BarchartDaily)
-            EXTERNAL_SYMBOL = f'{name}Z21' if FUTURES else name
-
-            async with BarchartDailyLoader() as yfl:
-                await yfl.fetch(
-                    symbol, md_type=MDType.OHLC, duration=timedelta(days=365 * 35), resolution=Resolution.d1)
-
-    if 0:
-        for symbol_name in ['ES', 'CL', 'DX', 'VI', 'GG', 'T2', 'T3', 'T5', 'T10', 'T10U', 'T30', 'T30U']:
-            FUTURES = True
-            name = aliases.get(symbol_name, symbol_name)
-
-            symbol = await DataBase.create_symbol(symbol_name, exchange=Exchange.BarchartDaily)
-            EXTERNAL_SYMBOL = f'{name}Z21' if FUTURES else name
-
-            async with BarchartDailyLoader() as yfl:
-                await yfl.fetch(
-                    symbol, md_type=MDType.OHLC, duration=timedelta(days=365 * 35), resolution=Resolution.d1)
-
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    asyncio.run(main(sys.argv[1:]))

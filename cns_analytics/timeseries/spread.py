@@ -3,12 +3,8 @@
 import functools
 from typing import Optional, Tuple, List
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import ta.trend
-import ta.volatility
-from matplotlib.widgets import MultiCursor
 
 from cns_analytics.entities import Symbol
 from cns_analytics.timeseries.timeseries import TimeSeries
@@ -99,6 +95,8 @@ class Spread(TimeSeries):
         return [self._leg1, self._leg2]
 
     def plot_legs(self):
+        import matplotlib.pyplot as plt
+
         """Plots legs of spread"""
         fig = plt.figure(figsize=(15, 6))
         plt.title(self.get_name())
@@ -219,6 +217,11 @@ class Spread(TimeSeries):
         return closes_low, closes_high
 
     def plot(self):
+        import ta.trend
+        import ta.volatility
+        from matplotlib.widgets import MultiCursor
+        import matplotlib.pyplot as plt
+
         df = self.get_raw_df()
 
         s1 = self._leg1
