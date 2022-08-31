@@ -97,10 +97,7 @@ class Exchange(enum.Enum):
     Fred = "Fred"
     QMall = "QMall"
     WhiteBit = "WhiteBit"
-<<<<<<< HEAD
-=======
     Deribit = "Deribit"
->>>>>>> 55805cfcf082a67fc6ccc1a36dd418c0a6b49023
 
 
 @dataclass

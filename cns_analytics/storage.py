@@ -32,7 +32,7 @@ class Storage:
         self.ssh = None
 
     def ensure_connected(self):
-        if cls._storage is not None and cls._storage.ssh.get_transport().is_active():
+        if self.ssh is not None and self.ssh.get_transport().is_active():
             return
 
         ssh = paramiko.SSHClient()
