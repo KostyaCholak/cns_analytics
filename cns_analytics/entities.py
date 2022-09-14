@@ -82,6 +82,7 @@ class MDType(enum.Enum):
     MARKET_VOLUME = enum.auto()
     FUNDING_RATES = enum.auto()
     BID_ASK = enum.auto()
+    EOD = enum.auto()
 
 
 class Exchange(enum.Enum):
@@ -98,6 +99,8 @@ class Exchange(enum.Enum):
     QMall = "QMall"
     WhiteBit = "WhiteBit"
     Deribit = "Deribit"
+    Investing = "Investing"
+    Fundamentals = "Fundamentals"
 
 
 @dataclass

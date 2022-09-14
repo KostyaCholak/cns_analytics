@@ -43,7 +43,7 @@ class BarchartDailyLoader(BaseMDLoader):
     def get_step_for_resolution(md_type: MDType, resolution: Resolution) -> timedelta:
         if md_type in {MDType.MARKET_VOLUME, MDType.OHLC}:
             assert resolution is Resolution.d1
-            return timedelta(days=365 * 35)
+            return timedelta(days=365 * 40)
 
         raise NotImplementedError()
 

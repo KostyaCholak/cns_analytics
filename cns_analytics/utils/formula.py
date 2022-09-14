@@ -2,9 +2,11 @@ import token
 import tokenize
 from io import BytesIO
 
+import numpy as np
 import pandas as pd
 from cns_analytics import TimeSeries, DataBase, Exchange, Symbol
 from cns_analytics.market_data import download_data
+from cns_analytics.ta import sma, rsi
 
 
 async def _get_md(symbols, exchange, start=None, end=None):
@@ -43,12 +45,26 @@ def fix_money(series, money=100, interval=pd.Timedelta('90d')):
             last_rebalance = ts
         hist.append(open_money + qty * px)
     
-    return pd.Series(hist, name=series.name, index=series.index)
+    return pd.Series(hist, name=series.name, index=series.index) + money
 
 
-async def formula_to_ts(formula, exchange: Exchange = Exchange.BarchartDaily, start=None, end=None) -> TimeSeries:
+def mask_formula(df, formula) -> pd.Series:
     context = {
-        'm': fix_money
+        'm': fix_money,
+        'sma': sma,
+        'rsi': rsi,
+        'np': np,
+        'pd': pd,
+    }
+    return eval(formula, context, {'df': df})
+
+
+async def formula(formula, exchange: Exchange = Exchange.BarchartDaily, start=None, end=None) -> pd.DataFrame:
+    context = {
+        'm': fix_money,
+        'sma': sma,
+        'np': np,
+        'pd': pd,
     }
 
     code = list(tokenize.tokenize(BytesIO(formula.encode('utf-8')).readline))
@@ -81,4 +97,9 @@ async def formula_to_ts(formula, exchange: Exchange = Exchange.BarchartDaily, st
 
     new_code_str = tokenize.untokenize(new_code).decode('utf-8')
 
-    return TimeSeries.from_df(eval(new_code_str, context, {'df': data}).to_frame('SPREAD'))
+    return eval(new_code_str, context, {'df': data}).to_frame('SPREAD')
+
+
+async def formula_to_ts(formula, exchange: Exchange = Exchange.BarchartDaily, start=None, end=None) -> TimeSeries:
+    df = await formula(formula, exchange, start, end)
+    return TimeSeries.from_df(df)

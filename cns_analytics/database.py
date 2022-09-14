@@ -27,7 +27,7 @@ class DataBase:
     _pk_cache = {}
     _queries = {}
     _db_cache = {}
-    _default_exchange = Exchange.BinanceFutures
+    _default_exchange = Exchange.BarchartDaily
 
     @classmethod
     async def start(cls):

@@ -42,4 +42,28 @@ def rollover(dfs, amount=100e3, enter='60d', exit='30d'):
             index.append(ts)
             
     return pd.DataFrame(history, index).reval
-            
+
+
+class History:
+    def __init__(self):
+        self.__index = []
+        self.__history = defaultdict(list)
+    
+    def add(self, key, value):
+        self.__history[key].append(value)
+        
+    def add_many(self, data: dict):
+        for key, value in data.items():
+            self.add(key, value)
+        
+    def add_index(self, value):
+        self.__index.append(value)
+        
+    def get(self, key):
+        return pd.Series(self.__history[key], index=self.__index)
+    
+    def get_all(self):
+        return pd.DataFrame(self.__history, index=self.__index)
+    
+    def get_index(self):
+        return self.__index

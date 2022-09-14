@@ -46,7 +46,7 @@ class Image:
         pass
 
     def add(self, something: Union[TimeSeries, pd.DataFrame, pd.Series, tuple,
-                                   np.ndarray, List, float, pd.Timestamp, datetime], style='line', **kwargs):
+                                   np.ndarray, List, float, pd.Timestamp, datetime], style='line', marker='rx', **kwargs):
         import matplotlib.pyplot as plt
 
         if isinstance(something, TimeSeries):
@@ -56,7 +56,7 @@ class Image:
         elif isinstance(something, pd.Timestamp) or isinstance(something, datetime):
             plt.axvline(something, **kwargs)
         elif isinstance(something, tuple):
-            plt.plot(*something, 'rx')
+            plt.plot(*something, marker or 'rx')
         else:
             if style == 'line':
                 plt.plot(something, **kwargs)
