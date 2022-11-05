@@ -79,6 +79,7 @@ class MDType(enum.Enum):
     """ Types of market data
      Used in market data loaders to identify what data to load"""
     OHLC = enum.auto()
+    TICKS = enum.auto()
     MARKET_VOLUME = enum.auto()
     FUNDING_RATES = enum.auto()
     BID_ASK = enum.auto()
@@ -101,6 +102,7 @@ class Exchange(enum.Enum):
     Deribit = "Deribit"
     Investing = "Investing"
     Fundamentals = "Fundamentals"
+    TradingEconomics = "TradingEconomics"
 
 
 @dataclass

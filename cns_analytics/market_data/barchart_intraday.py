@@ -10,7 +10,7 @@ import pytz
 
 from cns_analytics.database import DataBase
 from cns_analytics.entities import Resolution, MDType, Symbol, Exchange
-from cns_analytics.market_data.base_loader import BaseMDLoader
+from cns_analytics.market_data.base_loader import BaseMDLoader, RequestedTooMuchData
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ class BarchartIntradayLoader(BaseMDLoader):
     _session = None
     _authenticated = False
     source_id = 3
+    stop_on_empty = False
 
     def __init__(self):
         super().__init__()
@@ -46,7 +47,7 @@ class BarchartIntradayLoader(BaseMDLoader):
     def get_step_for_resolution(self, md_type: MDType, resolution: Resolution) -> timedelta:
         if md_type in {MDType.MARKET_VOLUME, MDType.OHLC}:
             if len(self._data_points_per_call) > 5:
-                mult = 7000 / max(self._data_points_per_call)
+                mult = 7000 / (max(self._data_points_per_call) + 1)
                 
                 mult = self._last_mult * mult
             else:
@@ -90,7 +91,9 @@ class BarchartIntradayLoader(BaseMDLoader):
         
         data_points_num = len(data['data'])
 
-        assert data_points_num < 9998, 'Requested too much data!!\nLower load step.'
+        if data_points_num >= 9998:
+            self._data_points_per_call.clear()
+            raise RequestedTooMuchData()
         
         self._data_points_per_call.append(data_points_num)
         self._data_points_per_call = self._data_points_per_call[-10:]

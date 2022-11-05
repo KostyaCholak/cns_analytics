@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class FinamLoader(BaseMDLoader):
     source_id = 6
+    stop_on_empty = False
 
     def __init__(self):
         super().__init__()
@@ -38,11 +39,14 @@ class FinamLoader(BaseMDLoader):
 
         sym = self.exporter.lookup(code=code, market=market,
                                    name_comparator=LookupComparator.CONTAINS)
-        assert len(sym) == 1
+        assert len(sym) >= 1, sym
+        if len(sym) > 1:
+            print(sym)
+            logger.warning("Found more than one symbol with that code!")
 
-        self._sym_cache[symbol.name] = sym.index[0]
+        self._sym_cache[symbol.name] = sym.index[-1]
 
-        return sym.index[0]
+        return sym.index[-1]
 
     @staticmethod
     def get_step_for_resolution(md_type: MDType, resolution: Resolution) -> timedelta:
@@ -67,7 +71,7 @@ class FinamLoader(BaseMDLoader):
         else:
             raise NotImplementedError()
 
-        market = Market.FUTURES
+        market = Market.FUTURES_ARCHIVE
 
         if md_type is MDType.OHLC:
             df = self.exporter.download(self.find_symbol(symbol, market),
@@ -92,6 +96,8 @@ class FinamLoader(BaseMDLoader):
                     "px_close": float(cls),
                     "volume": float(volume)
                 })
+                
+            await asyncio.sleep(5)
 
             return data
 

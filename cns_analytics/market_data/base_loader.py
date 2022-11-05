@@ -16,6 +16,10 @@ class MDLoaderException(Exception):
     pass
 
 
+class RequestedTooMuchData(MDLoaderException):
+    pass
+
+
 class BaseMDLoader(abc.ABC):
     """ Abstract Base Market Data Loader Class
 
@@ -98,8 +102,10 @@ class BaseMDLoader(abc.ABC):
 
         pending_tasks = []
         task_to_cursor_map = {}
+        is_first_data = True
+        collected_data: List[Dict] = []
 
-        while date_cursor > earliest_date:
+        while date_cursor > earliest_date or (not self.stop_on_empty and is_first_data):
             should_load = self._should_load(saved_first, saved_last, date_cursor-step, date_cursor)
 
             if not should_load:
@@ -111,68 +117,77 @@ class BaseMDLoader(abc.ABC):
             pending_tasks.append(task)
             task_to_cursor_map[task] = date_cursor
 
-            data = await task
+            try:
+                data = await task
+            except RequestedTooMuchData:
+                self.logger.info(f'{symbol.name}: Requested too much data')
+                await asyncio.sleep(2)
+                step = self.get_step_for_resolution(md_type, resolution)
+                continue
             self.logger.info(f'{symbol.name}: Loaded {len(data)} data points '
                              f'from {(date_cursor - step).strftime("%Y-%m-%d")} '
                              f'to {date_cursor.strftime("%Y-%m-%d")}')
             if not data and self.stop_on_empty is True:
                 break
+            elif data and is_first_data:
+                is_first_data = False
+                earliest_date = date_cursor - duration
+                
+            collected_data.extend(data)
 
             date_cursor -= step
             
             step = self.get_step_for_resolution(md_type, resolution)
 
-        collected_data: List[Dict] = []
-
         if not pending_tasks:
             return True
 
-        while True:
-            finished, unfinished = await asyncio.wait(
-                pending_tasks, return_when=asyncio.FIRST_COMPLETED)
+#         while True:
+#             finished, unfinished = await asyncio.wait(
+#                 pending_tasks, return_when=asyncio.FIRST_COMPLETED)
 
-            should_stop = False
+#             should_stop = False
 
-            for task in finished:
-                pending_tasks.remove(task)
-                data = task.result()
+#             for task in finished:
+#                 pending_tasks.remove(task)
+#                 data = task.result()
 
-                if data is None:
-                    # canceled
-                    continue
+#                 if data is None:
+#                     # canceled
+#                     continue
 
-                cursor = task_to_cursor_map[task]
-                # self.logger.info(f'{symbol.name}: Loaded {len(data)} data points '
-                #                  f'from {(cursor - step).strftime("%Y-%m-%d")} '
-                #                  f'to {cursor.strftime("%Y-%m-%d")}')
+#                 cursor = task_to_cursor_map[task]
+#                 # self.logger.info(f'{symbol.name}: Loaded {len(data)} data points '
+#                 #                  f'from {(cursor - step).strftime("%Y-%m-%d")} '
+#                 #                  f'to {cursor.strftime("%Y-%m-%d")}')
 
-                if len(data) == 0:
-                    should_stop = True
-                    continue
+#                 if len(data) == 0:
+#                     should_stop = True
+#                     continue
 
-                if not isinstance(data, List):
-                    raise MDLoaderException(f"Expected object of type List, got:\n {data}")
+#                 if not isinstance(data, List):
+#                     raise MDLoaderException(f"Expected object of type List, got:\n {data}")
 
-                if not isinstance(data[0], Dict):
-                    raise MDLoaderException(f"Expected row to be Dict, got:\n {data[0]}")
+#                 if not isinstance(data[0], Dict):
+#                     raise MDLoaderException(f"Expected row to be Dict, got:\n {data[0]}")
 
-                if 'ts' not in data[0]:
-                    raise MDLoaderException(f"Expected row to have key `ts`, got:\n {data[0]}")
+#                 if 'ts' not in data[0]:
+#                     raise MDLoaderException(f"Expected row to have key `ts`, got:\n {data[0]}")
 
-                if not isinstance(data[0]['ts'], datetime):
-                    raise MDLoaderException(f"Expected row['ts'] to be of type datetime, "
-                                            f"got:\n {data[0]}")
+#                 if not isinstance(data[0]['ts'], datetime):
+#                     raise MDLoaderException(f"Expected row['ts'] to be of type datetime, "
+#                                             f"got:\n {data[0]}")
 
-                collected_data.extend(data)
+#                 # collected_data.extend(data)
 
-            if len(pending_tasks) == 0:
-                if len(unfinished) != 0:
-                    breakpoint()
-                break
+#             if len(pending_tasks) == 0:
+#                 if len(unfinished) != 0:
+#                     breakpoint()
+#                 break
 
-            if should_stop:
-                for task in pending_tasks:
-                    task.cancel()
+#             if should_stop:
+#                 for task in pending_tasks:
+#                     task.cancel()
 
         total_loaded_count = len(collected_data)
 

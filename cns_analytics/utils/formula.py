@@ -27,7 +27,7 @@ async def _get_md(symbols, exchange, start=None, end=None):
 
     df = ts.get_raw_df()
     df['index'] = df.index
-
+    
     return df
 
 
