@@ -11,7 +11,6 @@ setup(
     author='Kostya Cholak',
     author_email='kostya.cholak@gmail.com',
     install_requires=[
-        'asyncpg==0.23.0',
         'matplotlib',
         'pandas',
         'pytz==2018.7',
@@ -30,6 +29,8 @@ setup(
         'colorama==0.3.9',
         'python-dateutil==2.8.1',
         'python-dotenv',
+        'feather-format==0.4.1',
+        'paramiko==2.11.0'.
     ],
     packages=find_packages()
 )
