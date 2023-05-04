@@ -30,7 +30,7 @@ setup(
         'python-dateutil==2.8.1',
         'python-dotenv',
         'feather-format==0.4.1',
-        'paramiko==2.11.0'.
+        'paramiko==2.11.0',
     ],
     packages=find_packages()
 )
